@@ -52,8 +52,9 @@ Options:
   --print-key             Print the deploy public key and exit
   --keep-remote           Do not rewrite an existing origin URL
   --yes, -y               Do not wait for the deploy key confirmation
-  --admin-username=NAME   Forwarded to setup-linux.sh
-  --admin-password=PASS   Forwarded to setup-linux.sh (prefer the interactive prompt)
+  --admin-username=NAME   Forwarded to setup-linux.sh (implies --create-admin)
+  --admin-password=PASS   Forwarded to setup-linux.sh (implies --create-admin)
+  --create-admin          Forwarded to setup-linux.sh (headless install only)
   --skip-docker-install   Forwarded to setup-linux.sh
   --force-env             Forwarded to setup-linux.sh (rotates secrets)
   -h, --help              Show this help
@@ -81,7 +82,7 @@ for arg in "$@"; do
     --keep-remote) KEEP_REMOTE=true ;;
     --print-key) PRINT_KEY_ONLY=true ;;
     --yes|-y) ASSUME_YES=true ;;
-    --admin-username=*|--admin-password=*|--skip-docker-install|--force-env)
+    --admin-username=*|--admin-password=*|--create-admin|--skip-docker-install|--force-env)
       SETUP_ARGS+=("$arg")
       ;;
     -h|--help) usage; exit 0 ;;
@@ -321,6 +322,7 @@ EOF
   fi
   echo
   echo "Next deploys: sudo bash ${REPO_DIR}/scripts/deploy-server.sh --update"
+  echo "First web access runs the one-time setup wizard (company, logo, super admin)."
   echo "Back up .env and certs/server.key to encrypted offline storage."
 }
 
