@@ -31,6 +31,7 @@ UPDATE_ONLY=false
 CLONE_ONLY=false
 KEEP_REMOTE=false
 PRINT_KEY_ONLY=false
+SKIP_BACKUP=false
 SETUP_ARGS=()
 
 usage() {
@@ -48,6 +49,7 @@ Options:
   --key=PATH              Deploy key path (default: ~/.ssh/artotel_deploy)
   --ssh-alias=NAME        SSH config alias (default: github-artotel)
   --update                Require an existing clone; pull and rebuild
+  --skip-backup           Do not create a database backup before rebuilding
   --clone-only            Clone only; do not run setup or rebuild
   --print-key             Print the deploy public key and exit
   --keep-remote           Do not rewrite an existing origin URL
@@ -78,6 +80,7 @@ for arg in "$@"; do
     --key=*) KEY_PATH="${arg#*=}" ;;
     --ssh-alias=*) SSH_ALIAS="${arg#*=}" ;;
     --update) UPDATE_ONLY=true ;;
+    --skip-backup) SKIP_BACKUP=true ;;
     --clone-only) CLONE_ONLY=true ;;
     --keep-remote) KEEP_REMOTE=true ;;
     --print-key) PRINT_KEY_ONLY=true ;;
@@ -255,11 +258,15 @@ clone_repo() {
 pull_repo() {
   require_clean_tree
   ensure_remote
+  local before after
+  before="$(git -C "$REPO_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   log "Fetching origin/${BRANCH}"
   git -C "$REPO_DIR" fetch --prune origin "$BRANCH"
   git -C "$REPO_DIR" checkout "$BRANCH" >/dev/null 2>&1 || \
     die "Could not check out ${BRANCH} in ${REPO_DIR}."
   git -C "$REPO_DIR" merge --ff-only "origin/${BRANCH}"
+  after="$(git -C "$REPO_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  log "Repository updated: ${before} -> ${after}"
 }
 
 ensure_docker() {
@@ -299,8 +306,28 @@ run_setup() {
   ( cd "$REPO_DIR" && bash scripts/setup-linux.sh "${SETUP_ARGS[@]}" )
 }
 
+backup_before_update() {
+  if [[ "$SKIP_BACKUP" == "true" ]]; then
+    warn "Skipping the pre-update database backup (--skip-backup)"
+    return 0
+  fi
+
+  local container
+  container="$(cd "$REPO_DIR" && "${DOCKER[@]}" compose ps -q backend 2>/dev/null || true)"
+  if [[ -z "$container" ]]; then
+    warn "Backend container is not running; skipping the pre-update backup"
+    return 0
+  fi
+
+  log "Backing up the database before the update"
+  if ! ( cd "$REPO_DIR" && "${DOCKER[@]}" compose exec -T backend node backend/dist/cli/backup-db.js ); then
+    die "Pre-update backup failed. Fix it or rerun with --skip-backup."
+  fi
+}
+
 rebuild() {
   ensure_docker
+  backup_before_update
   log "Rebuilding and restarting the Compose stack"
   ( cd "$REPO_DIR" && "${DOCKER[@]}" compose build --pull && "${DOCKER[@]}" compose up -d )
   wait_for_backend
