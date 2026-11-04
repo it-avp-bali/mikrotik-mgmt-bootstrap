@@ -16,7 +16,7 @@ Server  --curl-->  this public repo (script only)
 GitHub  --clone (read-only deploy key)-->  private app repo
    |
    v
-scripts/setup-linux.sh  (Docker, .env, TLS, build, admin)
+scripts/setup-linux.sh  (Docker, .env, TLS, build; then the web wizard)
 ```
 
 ## What the script does
@@ -90,14 +90,19 @@ Return to the server and press **Enter**.
 
 ## After installation
 
-The script prints the application URL and the initial admin credentials once.
-Open:
+The script prints the application URL. Open it:
 
 ```
 https://<server-ip>
 ```
 
 The certificate is self-signed until you install a trusted one.
+
+No account is created by default. The first page is the one-time wizard:
+company name, company logo (PNG/JPEG/WebP, max 512 KB), and the first super
+admin. The wizard disappears once an account exists and cannot be replayed.
+For a headless server, pass `--create-admin` to create the first admin from
+the CLI instead.
 
 ## Subsequent deployments
 
@@ -125,7 +130,8 @@ Compose stack, and waits for the backend healthcheck.
 | `--print-key` | Print the public key and exit |
 | `--keep-remote` | Do not rewrite an existing `origin` URL |
 | `--yes` | Skip the deploy-key confirmation prompt |
-| `--admin-username=`, `--admin-password=` | Forwarded to `setup-linux.sh` |
+| `--admin-username=`, `--admin-password=` | Forwarded to `setup-linux.sh`; implies `--create-admin` |
+| `--create-admin` | Create the first admin from the CLI instead of the web wizard |
 | `--skip-docker-install`, `--force-env` | Forwarded to `setup-linux.sh` |
 
 Full deployment documentation lives in the private repository at
