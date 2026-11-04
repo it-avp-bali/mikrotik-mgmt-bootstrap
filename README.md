@@ -113,8 +113,11 @@ ssh admin@<server>
 sudo bash /opt/artotel-mikrotik-mgmt/scripts/deploy-server.sh --update
 ```
 
-`--update` refuses a dirty working tree, fast-forwards `main`, rebuilds the
-Compose stack, and waits for the backend healthcheck.
+`--update` refuses a dirty working tree, backs up the database inside the data
+volume, fast-forwards `main`, rebuilds the Compose stack, and waits for the
+backend healthcheck. Use `--skip-backup` only when the backend is already down
+and a recent backup exists. Rollback and verification steps live in the private
+repository at `docs/UPDATE_SERVER.md`.
 
 ## Options
 
@@ -126,6 +129,7 @@ Compose stack, and waits for the backend healthcheck.
 | `--key=PATH` | Deploy key path (default `~/.ssh/artotel_deploy`) |
 | `--ssh-alias=NAME` | SSH config alias (default `github-artotel`) |
 | `--update` | Require an existing clone; pull and rebuild |
+| `--skip-backup` | Do not create a database backup before rebuilding |
 | `--clone-only` | Clone only; skip setup/rebuild |
 | `--print-key` | Print the public key and exit |
 | `--keep-remote` | Do not rewrite an existing `origin` URL |
